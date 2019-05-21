@@ -1,0 +1,425 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+	 <meta charset="utf-8"/>
+	  <script src="./res/common/js/d3.v4.min.js"></script>
+	  <script src='./res/common/js/panzoom.min.js'></script>
+	  <script src="./res/common/js/grid.js" type="text/javascript"></script>
+	  <script src="./res/common/js/CellularMessanger.js" type="text/javascript"></script>
+	  <script src="./res/common/js/pectin.js" type="text/javascript"></script>
+	  <script src="./res/common/js/default.init.js" type="text/javascript"></script>
+	  
+
+	   <link rel="stylesheet" href="./res/common/css/menu.css">
+
+	  <script type="text/javascript">
+	  	var PREDEFINED_COLORS = ['#ffffff','#00ff00','#ff0000',
+	  							 '#0000ff','#ff00ff','#ffff00',
+	  							 '#00ffff','#aaaaaa','#a349a4',
+	  							 '#ff7f27','#b97a57','#408080'];
+
+	  	
+	  	CUSTOM_ON_CONNECT_CALLBACK = function()
+	  	{
+	  		
+	  	}
+
+	  	var insertionType = null;
+		grid.oncelltoggle = function(cell, index, toggled)
+			{
+				let initial = false;
+				if(!insertionType)
+				{
+					initial = true;
+					insertionType = document.getElementsByClassName('insertType')
+
+					for(let n = 0; n<insertionType.length; n++)
+					{
+
+						if(insertionType[n].checked)
+						{
+
+							insertionType = insertionType[n].getAttribute('id')
+							break;
+						}
+					}
+
+
+				}
+				
+
+
+
+
+				
+
+				var idx = index
+				var cll = cell
+				
+				if(insertionType === 'single' || !grid.cellsData[idx])
+					setCellState(index, Number(!grid.cellsData[index]), true, 
+						function(d){grid.cellsData[idx] = JSON.parse(d); cll.style.fill=PREDEFINED_COLORS[JSON.parse(d)]})
+			
+
+				if(insertionType !== 'single')
+				if(initial)
+				{
+					
+	
+
+
+
+					let c = grid.cellIdxtoXy(index)
+
+					function sanatizeCoords(coords)
+					{
+						let ret = {x:coords.x, y:coords.y}
+						
+						let wrapping = document.getElementById('wrapping');
+
+
+						if(ret.x >= grid.xs )
+							if(wrapping)
+								ret.x = coords.x%grid.xs;
+							else
+								ret.x = null
+
+
+						if(ret.x < 0)
+							if(wrapping)
+								ret.x = grid.xs + coords.x%grid.xs;
+							else
+								ret.x = null
+
+
+						if(ret.y >= grid.ys)
+							if(wrapping)
+								ret.y = coords.y%grid.ys;
+							else
+								ret.y = null
+
+						if(ret.y < 0 )
+							if(wrapping)
+								ret.y = grid.ys + coords.y%grid.ys;
+							else
+								ret.y = null
+
+						return ret;
+
+
+					}
+
+
+					//grid.toggleCellXY
+
+					//	(-1, -1 )  ( 0, -1 ) ( 1, -1 )
+					//
+					//  ( -1, 0 ) [ 0, 0 ] ( 1, 0 )
+					//
+					//	(-1, 1 ) ( 0, 1 ) ( 1, 1 )
+					//
+
+					let glider = [{x:c.x-1, y:c.y}, {x:c.x+1, y:c.y}, {x:c.x+1, y:c.y-1}, {x:c.x, y:c.y-2}]
+					let oscilator = [{x:c.x, y:c.y-1}, {x:c.x, y:c.y+1}]
+					let block = [{x:c.x, y:c.y+1}, {x:c.x+1, y:c.y+1}, {x:c.x+1, y:c.y}]
+
+					
+					let insertMe = null;
+
+					switch(insertionType)
+					{
+						case 'glider': 		insertMe = glider; break;
+						case 'block': 		insertMe = block; break;
+						case 'oscilator': 	insertMe = oscilator; break;
+					}
+
+
+					if(!insertMe)
+					{
+						console.error('Unknown thing to insert "'+insertionType+'"')
+						insertionType = null;
+						return
+					}
+
+
+					for(let n =0; n<insertMe.length; n++)
+					{
+						insertMe[n] = sanatizeCoords(insertMe[n]);
+
+						if(insertMe[n].x !== null &&
+						   insertMe[n].y !== null &&
+						   !grid.cellsData[grid.cellXYtoIdx(insertMe[n].x, insertMe[n].y)])
+							grid.toggleCellXY(insertMe[n].x, insertMe[n].y)
+					}
+
+
+					
+				}else
+				{
+				 return;
+				}
+
+				insertionType = null;
+
+				
+			}
+
+		<!--- ============================================================ -->
+		function randomFill()
+		{
+			let fillRatio = parseFloat(document.getElementById('randomCoef').value.replace(',', '.'))
+
+
+			for(let n =0; n<grid.cellsData.length; n++)
+			{			
+
+					setCellState(n, (Math.random() <= fillRatio ? 1 : 0), true, 
+
+					function(d){
+						grid.cellsData[n] = JSON.parse(d);
+						grid.updateCellProps(n, {fill : PREDEFINED_COLORS[JSON.parse(d)]} )
+						})
+
+				
+			}
+
+		}
+
+		function createGrid()
+			{
+				let sx = d3.select('#sizeX').node().value
+				let sy = d3.select('#sizeY').node().value
+
+				try{
+					sx = Number.parseInt(sx)
+					sy = Number.parseInt(sy)
+				}
+				catch(e)
+				{
+					alert('Niepoprawny rozmiar siatki!')
+					return
+				}
+
+
+	  			
+				
+	  			var translationY = document.getElementsByClassName('content')[0].offsetHeight
+				new2Dsimulation(sx, sy, true, function(d){grid.newGrid(sx, sy, true, JSON.parse(d),
+									[], 55, translationY+20); addNamedRule('moore', function(){})})
+			}
+
+		function alterWrapping()
+			{
+				var wrapping = d3.select('#wrapping').node().checked
+				
+				setWrappingMode(wrapping, function(d){
+					let checked = JSON.parse(d)
+
+					d3.select('#wrapping').node().checked = checked
+				})
+
+
+
+				return false
+			}
+
+
+
+
+
+			var steps = 0;
+			function step()
+			{
+				if(steps <= 0)
+				{
+					steps = parseInt(document.getElementById('stepsCount').value)
+				}
+				
+				steps--;
+
+				simulationStep(true, function(dn){
+
+								function timeoutF()
+								{
+									toAppend = JSON.parse(dn)
+									props 	 = []
+
+									for(let n =0; n<toAppend.length; n++)
+									{
+										grid.cellsData[n] = Number(toAppend[n])
+
+										props.push( { 
+														fill:PREDEFINED_COLORS[Number(toAppend[n])] 
+													} )
+
+
+									}
+
+
+
+				
+									grid.updateCellsProps(props)
+
+
+									if(steps > 0)
+										step()
+								}
+
+								if(steps != Infinity)
+									timeoutF()
+								else
+									setTimeout(timeoutF,  parseInt(document.getElementById('stepTimeout').value));
+								
+
+						})
+			}
+
+
+	  </script>
+
+	</head>
+<body onload="updateConnectionInfo();">
+
+	<div id='connect_bg' style='
+							    position: fixed;
+							    left:0;
+							    top:0;
+							    right:1vw;
+							    bottom:1vh;
+							    background-color: rgba(125,125,125, 0.3);
+							    '>
+
+							
+							<div style=' position: absolute;
+										  left: 50%;
+										  top: 50%;
+										  transform: translate(-50%, -50%);
+										  background-color: white;
+										  border: 2px black solid;
+										  padding:10px;
+										  font-weight: bold;'>
+
+								    <img id='infoImg' style='margin:auto; display: block;' src='./res/img/load.gif'>
+								    <div id='infoMsg' style='margin-top: 10px; width: 100%; text-align: center;'></div>
+								    <div id='subInfoMsg' style='font-size: 8pt; margin-top: 10px; width: 100%; text-align: center;'></div>
+							</div>
+							
+		</div>
+
+	<button class="collapsible">
+		<div class='icon'></div>
+		<div class='icon'></div>
+		<div class='icon'></div>
+	</button>
+	<div class="content" expanded>
+		  <p>
+
+		  	<div style='display:inline-block; margin-left: 15px;'>
+					 <span style='padding: 3px;
+				 			   border-top: 1px black solid;
+				 			   border-left: 1px black solid;
+				 			   border-right: 1px black solid;
+				 			   font-weight: bold;'>
+				 			Siatka
+				 	 </span>
+				 	 <div style='border:1px solid black; clear:both; padding: 5px; display: table-cell;'>
+							Rozmiar X:<input type ="number" value="20" id="sizeX"  min="1" max="150" onfocusout="
+							 v=Number.parseInt(this.value);
+							 if(v<1 || Number.isNaN(v))this.value=1;
+							 if(v > 150)this.value=150;">
+
+							Rozmiar Y:<input type ="number" value="20" id="sizeY"  min="1" max="150" onfocusout="
+											 v=Number.parseInt(this.value);
+											 if(v<1 || Number.isNaN(v))this.value=1;
+											 if(v > 150)this.value=150;">
+
+							<button onclick='createGrid()'>Nowa siatka</button> 
+							<br style="margin-top:10px;">
+
+							<input id='wrapping' type="checkbox" onclick="return alterWrapping()" checked>Zawijanie
+
+				 	 </div>
+
+			</div>
+
+			<div style='display:inline-block; margin-left: 15px;'>
+					 <span style='padding: 3px;
+				 			   border-top: 1px black solid;
+				 			   border-left: 1px black solid;
+				 			   border-right: 1px black solid;
+				 			   font-weight: bold;'>
+				 			Wstawianie
+				 	 </span>
+				 	 <div style='border:1px solid black; clear:both; padding: 5px; display: table-cell;'>
+							<div>
+							 <i>Wstaw po kliknięciu:</i><br>
+							 <input id='single' 	type="radio" name="insertType" class="insertType" checked> Pojednycza komórka
+							 <input id='block'   	type="radio" name="insertType" class="insertType" > Blok
+							 <input id='glider'    	type="radio" name="insertType" class="insertType" > Glider
+							 <input id='oscilator' 	type="radio" name="insertType" class="insertType" > Oscylator
+							</div>
+
+							 <br style="margin-top:50px;">
+
+
+							Współczynnik wypełnienia: <input type ="number" value="0.5" id="randomCoef"  min="0.01" max="1" step="0.1" onfocusout="
+							 v=Number.parseFloat(this.value.replace(',', '.'));
+							 if(v<=0 || Number.isNaN(v))this.value=0.1;
+							 if(v > 1)this.value=1;" style="display:inline-block;">
+							 <button onclick="randomFill()" style="display:inline-block;">Wypełnij losowo!</button>
+
+				 	 </div>
+
+			</div>
+		  	
+
+		  	<div style='display:inline-block; margin-left: 15px;'>
+					 <span style='padding: 3px;
+				 			   border-top: 1px black solid;
+				 			   border-left: 1px black solid;
+				 			   border-right: 1px black solid;
+				 			   font-weight: bold;'>
+				 			Symulacja
+				 	 </span>
+				 	 <div style='border:1px solid black; clear:both; padding: 5px; display: table-cell;'>
+				 	 			<i>Symulacja krokowa:</i><br>
+				 	 			<div style="margin-left: 30px;">
+								 Liczba kroków: <input type ="number" value="1" id="stepsCount"  min="1" max="100" onfocusout="
+								 v=Number.parseInt(this.value);
+								 if(v<1 || Number.isNaN(v))this.value=1;
+								 if(v > 100)this.value=100;">
+								 <button onclick="step()">Wykonaj</button>
+								</div>
+
+								 
+								 <i>Symulacja ciągła:</i><br>
+								 <div style="margin-left: 30px;">
+								 Krok co (ms):<input type ="number" value="100" id="stepTimeout"  min="1" max="5000" onfocusout="
+								 v=Number.parseInt(this.value);
+								 if(v<1 || Number.isNaN(v))this.value=1;
+								 if(v > 5000)this.value=5000;">
+								 <button onclick="steps=Infinity; if(grid.cellsData.length)step();">Start</button>
+								 <button onclick="steps=0;">Stop</button>
+								 </div>
+
+				 	 </div>
+
+			</div>
+
+
+			
+
+	
+			 
+
+		 </p>
+	</div>
+
+	<div id="grid" style="z-index:-1; position: fixed; left:0; top:0; bottom:1vh; right:1vw; ">
+	</div>
+
+
+
+	<script src="./res/common/js/menu.js" type="text/javascript"></script>
+</body>
+</html>

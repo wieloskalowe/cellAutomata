@@ -1,0 +1,374 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+	 <meta charset="utf-8"/>
+	  <script src="./res/common/js/d3.v4.min.js"></script>
+	  <script src='./res/common/js/panzoom.min.js'></script>
+	  <script src="./res/common/js/grid.js" type="text/javascript"></script>
+	  <script src="./res/common/js/CellularMessanger.js" type="text/javascript"></script>
+	  <script src="./res/common/js/pectin.js" type="text/javascript"></script>
+	  <script src="./res/common/js/default.init.js" type="text/javascript"></script>
+
+	  <link rel="stylesheet" href="./res/1d/css/statesTable.css">
+	  <link rel="stylesheet" href="./res/common/css/menu.css">
+
+	  <script type="text/javascript">
+	  	var PREDEFINED_COLORS = ['#ffffff','#00ff00','#ff0000','#0000ff','#ff00ff','#ffff00','#00ffff']
+
+	  	
+	  	CUSTOM_ON_CONNECT_CALLBACK = function()
+	  	{
+	  	}
+
+
+		grid.oncelltoggle = function(cell, index, toggled)
+			{
+				var idx = index
+				var cll = cell
+				var alterIdx = Number.parseInt( index - ((grid.ys-1)*grid.xs) )
+
+				setCellState(alterIdx, Number(!grid.cellsData[idx]), true, 
+
+				function(d){grid.cellsData[idx] = JSON.parse(d); cll.style.fill=PREDEFINED_COLORS[JSON.parse(d)]})
+			}
+
+			function createGrid()
+			{
+				var s = d3.select('#size').node().value
+
+				try{
+					s = Number.parseInt(s)
+				}
+				catch(e)
+				{
+					alert('Niepoprawny rozmiar siatki!')
+					return
+				}
+				
+				var translationY = document.getElementsByClassName('content')[0].offsetHeight
+				new1Dsimulation(s, true, function(d){grid.newGrid(s, 1, true, JSON.parse(d),
+								[], 55, translationY+20); })
+			}
+
+			function alterWrapping()
+			{
+				var wrapping = d3.select('#wrapping').node().checked
+				
+				setWrappingMode(wrapping, function(d){
+					let checked = JSON.parse(d)
+
+					d3.select('#wrapping').node().checked = checked
+				})
+
+
+
+				return false
+			}
+
+			function recalculateRule(cell)
+			{
+				cell.setAttribute('set', Number(!Boolean(parseInt(cell.getAttribute('set')))))
+				ruleNumber = ''
+
+				for(let n =7; n>=0; n--)
+				{
+					ruleNumber += String(parseInt(document.getElementById("BIT"+n).getAttribute('set')))
+				}
+				
+				document.getElementById('ruleNumber').value = parseInt(ruleNumber, 2)
+				
+				redrawRule()
+			}
+
+			function redrawRule()
+			{
+				if(!window.graphicalRulesInited)
+				{
+					for(let n=0; n<8; n++)
+					{
+						let ruleGroup = Array.from(document.getElementsByClassName('neigh'+n))
+
+						ruleGroup = ruleGroup.sort(function(a,b){
+
+							return parseInt(a.getAttribute('bit')) - parseInt(b.getAttribute('bit'))
+						})
+
+						let binVal = n.toString(2)
+
+
+
+						for(let l =0; l<3; l++)
+						{
+							if(binVal.length > 0)
+							{
+								v = parseInt(binVal[binVal.length-1])
+								binVal = binVal.substr(0, binVal.length-1)
+
+								ruleGroup[l].style.backgroundColor = PREDEFINED_COLORS[v]
+							}
+						}
+
+					}
+				}
+
+				window.graphicalRulesInited = true
+				let ruleNumber = document.getElementById('ruleNumber')
+
+				let rule = parseInt(ruleNumber.value).toString(2)
+
+				for(let n=0; n<8; n++)
+				{
+					if(rule.length > 0)
+					{
+						let cell = document.getElementById("BIT"+n)
+						cell.style.backgroundColor = PREDEFINED_COLORS[ parseInt(rule[rule.length-1])]
+						cell.setAttribute('set', rule[rule.length-1])
+						rule = rule.substr(0, rule.length-1)
+					}else
+					{
+						cell = document.getElementById("BIT"+n)
+						cell.style.backgroundColor = PREDEFINED_COLORS[0]
+						cell.setAttribute('set', '0')
+					}
+
+				}
+
+			}
+
+		
+			var steps = 0;
+			function step(newRule=true)
+			{
+				if(steps <= 0)
+				{
+					steps = parseInt(document.getElementById('stepsCount').value)
+				}
+				
+				steps--;
+
+
+				if(grid.cellsData.length < 0)
+				{
+					alert('Siatka jest niezainicjalizowana! Stwórz nową!')
+					return
+				}
+
+				if(newRule)
+				{
+					var r = d3.select('#ruleNumber').node().value
+
+					try{
+						r = Number.parseInt(r)
+					}
+					catch(e)
+					{
+						alert('Niepoprawny numer reguły!')
+						return
+					}
+					if(r > 255 || r<0)
+					{
+						alert('Reguła musi być z zakresu <0,255>!')
+						return
+					}
+					newNumericRule(r, function(d){
+						simulationStep(true, function(dn){
+							toAppend = JSON.parse(dn)
+							props 	 = []
+
+							for(let n =0; n<toAppend.length; n++)
+							{
+								props.push( { 
+												fill:PREDEFINED_COLORS[Number(toAppend[n])] 
+											} )
+							}
+
+							grid.setModifiableByRowIdx(grid.ys-1, false)
+							grid.appendRow(true, toAppend, props)
+
+							if(steps > 0)
+								step(false)
+
+						})
+					})
+
+				}
+				else
+				{
+					simulationStep(true, function(dn){
+							toAppend = JSON.parse(dn)
+							props 	 = []
+
+							for(let n =0; n<toAppend.length; n++)
+							{
+								props.push( { 
+												fill:PREDEFINED_COLORS[Number(toAppend[n])] 
+											} )
+							}
+
+							grid.setModifiableByRowIdx(grid.ys-1, false)
+							grid.appendRow(true, toAppend, props)
+
+							if(steps > 0)
+								step(false)
+
+						})
+				}
+				
+			}
+
+
+	  </script>
+
+	</head>
+
+<body onload="updateConnectionInfo(); redrawRule()">
+
+
+	<button class="collapsible">
+		<div class='icon'></div>
+		<div class='icon'></div>
+		<div class='icon'></div>
+	</button>
+	<div class="content" expanded>
+	<p>
+		  	
+		  
+
+			<div id='connect_bg' style='
+									    position: fixed;
+									    left:0;
+									    top:0;
+									    right:1vw;
+									    bottom:1vh;
+									    background-color: rgba(125,125,125, 0.3);
+									    '>
+
+									
+									<div style=' position: absolute;
+												  left: 50%;
+												  top: 50%;
+												  transform: translate(-50%, -50%);
+												  background-color: white;
+												  border: 2px black solid;
+												  padding:10px;
+												  font-weight: bold;'>
+
+										    <img id='infoImg' style='margin:auto; display: block;' src='./res/img/load.gif'>
+										    <div id='infoMsg' style='margin-top: 10px; width: 100%; text-align: center;'></div>
+										    <div id='subInfoMsg' style='font-size: 8pt; margin-top: 10px; width: 100%; text-align: center;'></div>
+									</div>
+									
+				</div>
+
+
+
+			<div style='display:inline-block;'>
+
+				<span style='padding: 3px;
+							 border-top: 1px black solid;
+							 border-left: 1px black solid;
+							  border-right: 1px black solid;
+							  font-weight: bold;'>Reguły</span>
+
+
+
+					<div style='border: 1px solid black; padding:5px; display: table-cell;'>
+					Numerycznie: <input type ="number" value="90" id="ruleNumber"  min="0" max="255" onfocusout="
+								 v=Number.parseInt(this.value);
+								 if(v<0 || Number.isNaN(v))this.value=0;
+								 if(v > 255)this.value=255; redrawRule()">
+
+						 <table style='margin-top:10px;'>
+					 	<thead></thead>
+					 	<tbody>
+					 		<tr><td class='neigh7' bit=2></td><td class='neigh7' bit=1></td><td class='neigh7' bit=0></td>
+
+					 			<td class='n_spacer'></td>
+
+					 			<td class='neigh6' bit=2></td><td class='neigh6' bit=1></td><td class='neigh6' bit=0> </td>
+
+					 			<td class='n_spacer'></td>
+
+					 			<td class='neigh5' bit=2></td><td class='neigh5' bit=1></td><td class='neigh5' bit=0></td> 
+
+					 			<td class='n_spacer'></td>
+
+					 			<td class='neigh4' bit=2></td><td class='neigh4' bit=1></td><td class='neigh4' bit=0> </td>
+
+					 			<td class='n_spacer'></td>
+
+					 			<td class='neigh3' bit=2></td><td class='neigh3' bit=1></td><td class='neigh3' bit=0> </td>
+
+					 			<td class='n_spacer'></td>
+
+					 			<td class='neigh2' bit=2></td><td class='neigh2' bit=1></td><td class='neigh2' bit=0> </td>
+
+					 			<td class='n_spacer'></td>
+
+					 			<td class='neigh1' bit=2></td><td class='neigh1' bit=1></td><td class='neigh1' bit=0></td> 
+
+					 			<td class='n_spacer'></td>
+
+					 			<td class='neigh0' bit=2></td><td class='neigh0' bit=1></td><td class='neigh0' bit=0> </td>
+					 			<td ></td>
+					 			<td>&larr; Stan sąsiedztwa</td>
+					 		</tr>
+					 		<tr> 
+					 			<td class='s_spacer'></td><td set="0" onclick="recalculateRule(this)" id='BIT7' class='state'></td><td class='s_spacer'></td><td></td>
+					 			<td class='s_spacer'></td><td set="0" onclick="recalculateRule(this)" id='BIT6' class='state'></td><td class='s_spacer'></td><td></td>
+					 			<td class='s_spacer'></td><td set="0" onclick="recalculateRule(this)" id='BIT5' class='state'></td><td class='s_spacer'></td><td></td>
+					 			<td class='s_spacer'></td><td set="0" onclick="recalculateRule(this)" id='BIT4' class='state'></td><td class='s_spacer'></td><td></td>
+					 			<td class='s_spacer'></td><td set="0" onclick="recalculateRule(this)" id='BIT3' class='state'></td><td class='s_spacer'></td><td></td>
+					 			<td class='s_spacer'></td><td set="0" onclick="recalculateRule(this)" id='BIT2' class='state'></td><td class='s_spacer'></td><td></td>
+					 			<td class='s_spacer'></td><td set="0" onclick="recalculateRule(this)" id='BIT1' class='state'></td><td class='s_spacer'></td><td></td>
+					 			<td class='s_spacer'></td><td set="0" onclick="recalculateRule(this)" id='BIT0' class='state'></td><td class='s_spacer'></td><td></td>
+					 			<td>&larr; Komórka po przejściach</td>
+					 		</tr>
+					 	</tbody>
+					 </table>
+					 </div>
+
+			</div>
+
+			<div style='display:inline-block; margin-left: 15px;'>
+					 <span style='padding: 3px;
+				 			   border-top: 1px black solid;
+				 			   border-left: 1px black solid;
+				 			   border-right: 1px black solid;
+				 			   font-weight: bold;'>
+				 			Siatka
+				 	 </span>
+				 	 <div style='border:1px solid black; padding: 5px; display: table-cell;'>
+							Rozmiar:
+							<input type ="number" value="20" id="size"  min="1" max="500" onfocusout="
+							 v=Number.parseInt(this.value);
+							 if(v<1 || Number.isNaN(v))this.value=1;
+							 if(v > 500)this.value=500;">
+							  <input id='wrapping' type="checkbox" onclick="return alterWrapping()" checked>Zawijanie
+							 <button onclick="createGrid()" style='margin-top: 15px; clear: both; display:block;'>Nowa siatka</button>
+
+				 	 </div>
+
+			</div>
+
+			 <div style='display: block; clear: both; margin-top: 30px;'>
+
+			 	Liczba kroków: <input type ="number" value="1" id="stepsCount"  min="1" max="100" onfocusout="
+							 v=Number.parseInt(this.value);
+							 if(v<1 || Number.isNaN(v))this.value=1;
+							 if(v > 100)this.value=100;">
+
+				 <button onclick="step()">Wykonaj [P]</button>
+			 </div>
+			 
+
+	</p>
+	</div>
+
+	<div id="grid" style="z-index:-1; position: fixed; left:0; top:0; bottom:1vh; right:1vw; " onkeydown="if(event.which == 80)step()">
+	</div>
+
+	<script src="./res/common/js/menu.js" type="text/javascript"></script>
+
+</body>
+</html>

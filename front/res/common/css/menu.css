@@ -1,0 +1,45 @@
+.collapsible {
+  background-color: #777;
+  color: white;
+  cursor: pointer;
+
+  border: none;
+  text-align: left;
+  outline: none;
+  font-size: 15px;
+
+  position: absolute;
+  top:5px;
+  left:5px;
+  width: 64px;
+  height: 64px;
+
+   border-radius:5px;
+}
+
+.icon
+{
+  background-color:white;
+  border-radius:3px;
+  height: 8px;
+  width: 80%;
+  margin: auto;
+  clear: both;
+  margin-bottom: 3px;
+}
+
+.active, .collapsible:hover {
+
+  background-color: #555;
+}
+
+.content {
+  padding: 0 18px;
+  max-height: 0;
+  float:right;
+  width:calc(100% - 90px);
+  overflow: hidden;
+  transition: max-height 0.2s ease-out;
+  background-color: #f1f1f1;
+
+}

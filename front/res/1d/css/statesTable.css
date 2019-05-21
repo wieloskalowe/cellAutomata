@@ -1,0 +1,51 @@
+[class^="neigh"]
+{
+	border: 1px black solid;
+	min-width:16px;
+	min-height:16px;
+
+	width:16px;
+	height:16px;
+
+	max-width:16px;
+	max-height:16px;
+	background-color: white;
+}
+
+.n_spacer
+{
+	border: 1px rgba(125,125,125,0.2) solid;
+	min-width:16px;
+	min-height:16px;
+
+	width:16px;
+	height:16px;
+
+	max-width:16px;
+	max-height:16px;
+}
+
+.state
+{
+	border: 1px black solid;
+	min-width:16px;
+	min-height:16px;
+
+	width:16px;
+	height:16px;
+
+	max-width:16px;
+	max-height:16px;
+}
+
+.s_spacer
+{
+	min-width:16px;
+	min-height:16px;
+
+	width:16px;
+	height:16px;
+
+	max-width:16px;
+	max-height:16px;
+}

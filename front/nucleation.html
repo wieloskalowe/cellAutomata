@@ -1,0 +1,771 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+	 <meta charset="utf-8"/>
+	  <script src="./res/common/js/d3.v4.min.js"></script>
+	  <script src='./res/common/js/panzoom.min.js'></script>
+	  <script src="./res/common/js/grid.js" type="text/javascript"></script>
+	  <script src="./res/common/js/CellularMessanger.js" type="text/javascript"></script>
+	  <script src="./res/common/js/pectin.js" type="text/javascript"></script>
+	  <script src="./res/common/js/default.init.js" type="text/javascript"></script>
+	  
+
+	   <link rel="stylesheet" href="./res/common/css/menu.css">
+
+	  <script type="text/javascript">
+	  	var PREDEFINED_COLORS = ['#ffffff','#00ff00','#ff0000',
+	  							 '#0000ff','#ff00ff','#ffff00',
+	  							 '#00ffff','#aaaaaa','#a349a4',
+	  							 '#ff7f27','#b97a57','#408080']
+	  	var PREDEFINED_ORG_SIZE = PREDEFINED_COLORS.length;
+
+	  	var ruleInf = null;
+	  	var validVals = new Array();
+	  	var validMax = Infinity;
+	  	var validMin = 0;
+	  	CUSTOM_ON_CONNECT_CALLBACK = function()
+	  	{
+	  		ruleInfo('nucleation', function(d){
+	  			ruleInf = JSON.parse(d).state;
+	  			
+
+	  		})
+	  	}
+
+	  	function toColor(num) {
+							   	 let nopadded = num.toString(16).split('');
+							   	
+							   	 while(nopadded.length < 6)
+							   	 {
+							   	 	nopadded = nopadded.reverse()
+							   	 	nopadded.push('0')
+							   	 	nopadded = nopadded.reverse()
+							   	 }
+
+
+							   	 return "#"+nopadded.join('')
+
+							    }
+
+	
+
+
+	  	var insertState = 1;
+		grid.oncelltoggle = function(cell, index, toggled)
+			{
+				setCellState(index, grid.cellsData[index] ? 0 : insertState, true, 
+						function(d){console.log(d);grid.cellsData[index] = JSON.parse(d); cell.style.fill=PREDEFINED_COLORS[JSON.parse(d)]})
+			}
+
+		document.oncontextmenu = function(event) {
+
+		    return false;
+		}
+
+		function invertColor(hex) {
+					    if (hex.indexOf('#') === 0) {
+					        hex = hex.slice(1);
+					    }
+					    // convert 3-digit hex to 6-digits.
+					    if (hex.length === 3) {
+					        hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+					    }
+					    if (hex.length !== 6) {
+					        throw new Error('Invalid HEX color.');
+					    }
+					    // invert color components
+					    var r = (255 - parseInt(hex.slice(0, 2), 16)).toString(16),
+					        g = (255 - parseInt(hex.slice(2, 4), 16)).toString(16),
+					        b = (255 - parseInt(hex.slice(4, 6), 16)).toString(16);
+					    // pad each with zeros and return
+					    function padZero(str, len) {
+						    len = len || 2;
+						    var zeros = new Array(len).join('0');
+						    return (zeros + str).slice(-len);
+						}
+					    return '#' + padZero(r) + padZero(g) + padZero(b);
+					}
+
+
+
+		function changeInsertionOption(event)
+		{
+			
+			if(event.which != 3)
+				return;
+
+			if(event.ctrlKey)
+			{
+				insertState = (insertState-1)
+				insertState = insertState<1 ? validMax : insertState
+			}else
+			{
+				insertState = (insertState+1)%(validMax+1)
+				insertState = insertState ? insertState : 1
+			}
+
+
+			updateInsertStateElement()
+		}
+
+		<!--- ============================================================ -->
+
+
+
+		function updateInsertStateElement()
+		{
+			var insertWhatElement = document.getElementById('insertWhat');
+
+			insertWhatElement.value = insertState;
+			insertWhatElement.style.backgroundColor = PREDEFINED_COLORS[insertState]
+			insertWhatElement.style.color 			= invertColor(PREDEFINED_COLORS[insertState])
+			insertWhatElement.style.fontWeight 		= "bold"
+		}
+		
+
+		function createGrid()
+			{
+				let sx = d3.select('#sizeX').node().value
+				let sy = d3.select('#sizeY').node().value
+
+				try{
+					sx = Number.parseInt(sx)
+					sy = Number.parseInt(sy)
+				}
+				catch(e)
+				{
+					alert('Niepoprawny rozmiar siatki!')
+					return
+				}
+
+
+	  			
+				
+	  			var translationY = document.getElementsByClassName('content')[0].offsetHeight
+				new2Dsimulation(sx, sy, true, function(d){grid.newGrid(sx, sy, true, JSON.parse(d),
+									[], 55, translationY+20); 
+
+									PREDEFINED_COLORS = PREDEFINED_COLORS.slice(0,PREDEFINED_ORG_SIZE);
+									let colorIdx = ruleInf.b;
+
+									for(let n=ruleInf.b; n<= (ruleInf.e === null ? sx*sy : ruleInf.e) ; n++, colorIdx++)
+									{
+										let found = false;
+										do
+										{
+											found = false;
+
+											let color = toColor(colorIdx);
+											for(let l=0; l<PREDEFINED_ORG_SIZE; l++)
+											{
+												if(color == PREDEFINED_COLORS[l])
+												{
+													found = true;
+													colorIdx++;
+												}
+											}
+
+										}while(found);
+
+										validVals.push(n);
+										PREDEFINED_COLORS.push(toColor(colorIdx))
+									}
+
+									validMin = validVals[0]
+									validMax = validVals[validVals.length-1]
+
+
+
+									addNamedRule('nucleation', function(){})})
+			}
+
+		function alterWrapping()
+			{
+				var wrapping = d3.select('#wrapping').node().checked
+				
+				setWrappingMode(wrapping, function(d){
+					let checked = JSON.parse(d)
+
+					d3.select('#wrapping').node().checked = checked
+				})
+
+
+
+				return false
+			}
+
+
+
+
+
+			var steps = 0;
+			function step()
+			{
+				if(steps <= 0)
+				{
+					steps = parseInt(document.getElementById('stepsCount').value)
+				}
+				
+				steps--;
+
+				simulationStep(true, function(dn){
+
+								function timeoutF()
+								{
+									toAppend = JSON.parse(dn)
+									props 	 = []
+
+									for(let n =0; n<toAppend.length; n++)
+									{
+										grid.cellsData[n] = Number(toAppend[n])
+
+										props.push( { 
+														fill:PREDEFINED_COLORS[Number(toAppend[n])] 
+													} )
+
+
+									}
+
+
+
+				
+									grid.updateCellsProps(props)
+
+
+									if(steps > 0)
+										step()
+								}
+
+								if(steps != Infinity)
+									timeoutF()
+								else
+									setTimeout(timeoutF,  parseInt(document.getElementById('stepTimeout').value));
+								
+
+						})
+			}
+
+
+			function insertUniform()
+			{
+				var insertWhat = 1;
+
+
+				let xInsert = parseInt(document.getElementById("uniformX").value)
+				let yInsert = parseInt(document.getElementById("uniformY").value)
+
+				function insertCell(n, value)
+				{
+					setCellState(n, value, true, 
+
+								function(d){
+									grid.cellsData[n] = JSON.parse(d);
+									grid.updateCellProps(n, {fill : PREDEFINED_COLORS[JSON.parse(d)]} )
+									})
+				}
+				
+				xCnt = xInsert;
+				yCnt = yInsert;
+
+				distX = Math.floor(grid.xs/xInsert);
+				distY = Math.floor(grid.ys/yInsert);
+
+				let offX = 0;
+				let offY = 0;
+
+
+				if(xCnt > Math.floor(grid.xs/2))
+					offX = Math.floor((grid.xs-xCnt));
+				else
+					offX = grid.xs - (((xCnt-1)*distX)+1);
+				
+
+				if(yCnt > Math.floor(grid.ys/2))
+					offY = Math.floor((grid.ys-yCnt));
+				else
+					offY = grid.ys - (((yCnt-1)*distY)+1);
+
+
+
+				offX = Math.floor(offX/2);
+				offY = Math.floor(offY/2);
+
+
+				
+
+				for(let y = 0; y<grid.ys; y++)
+				{	
+					xCnt = xInsert;
+
+					for(let x = 0; x<grid.xs; x++)
+					{
+
+						let n = grid.cellXYtoIdx(x,y);
+
+						let iks = x-offX
+						let igr = y-offY
+						if( !(iks%distX)  &&  !(igr%distY) &&
+						    xCnt > 0 &&  yCnt > 0 && iks >= 0 && igr >= 0)	
+						{
+							insertCell(n, insertWhat);
+
+							insertWhat++;
+							insertWhat%=validVals.length;
+							insertWhat = insertWhat==0 ? 1 : insertWhat
+
+							xCnt--;
+
+						} else if(grid.cellsData[n] != 0)
+									insertCell(n, 0);
+
+						
+
+					}
+					if(xCnt <= 0)
+						yCnt--;
+				}
+
+			}
+
+
+			function insertRadial()
+			{
+				let radius = document.getElementById('radius')
+				let count  =  document.getElementById('radius_count')
+
+				radius = parseInt(radius.value)
+				count = parseInt(count.value)
+
+				let singleSqArea = Math.ceil((2*radius)*(2*radius))
+				let totalSqArea  = singleSqArea*count;
+				let rectArea = grid.xs*grid.ys;
+
+				let maxFit = rectArea/singleSqArea;
+
+				if(totalSqArea >= rectArea ||  maxFit < count)
+				{
+					if(!confirm("Kierowniku, to się nie uda, wstawić: " + maxFit + "?"))
+						return;
+					else
+						count = maxFit;
+				} 
+
+				
+
+
+				function getSqCenterCell(sqId)
+				{
+
+					let xSqId = sqId % (grid.xs/(2*radius));
+					let ySqId = Math.floor(sqId / (grid.ys/(2*radius)));
+
+
+					let cx = xSqId * (2*radius) + radius;
+					let cy = ySqId * (2*radius) + radius;
+
+					cx = (cx >= grid.xs ? grid.xs-1 : cx)
+					cy = (cy >= grid.ys ? grid.ys-1 : cy)
+					
+
+					let ret = { x:cx, y:cy}
+					return ret;
+				}
+
+
+				function shuffleArray(array) {
+					    for (var i = array.length - 1; i > 0; i--) {
+					        var j = Math.floor(Math.random() * (i + 1));
+					        var temp = array[i];
+					        array[i] = array[j];
+					        array[j] = temp;
+					    }
+					}
+
+
+
+				let addUs = new Array();
+
+				function addThem()
+				{
+						function getRandomInt(min, max) {
+						    min = Math.ceil(min);
+						    max = Math.floor(max);
+						    return Math.floor(Math.random() * ( max - min )) + min;
+						}
+
+
+
+
+						for(let n = 0; n<addUs.length; n++)
+						{
+							let curr = addUs[n];
+
+
+							let margins = [0, //left
+										   0, //right
+										   0, //up
+										   0] //down
+
+							let pass = [{x:-radius, y:0},{x:radius, y:0},{x:0, y:-radius},{x:0, y:radius}];
+
+							for(let p =0; p<pass.length; p++)
+							{
+								let checked_x = parseInt(curr.x);
+								let checked_y = parseInt(curr.y);
+								let goOn = true;
+
+
+								while(checked_x < grid.xs && checked_x >= 0 &&
+								      checked_y < grid.ys && checked_y >= 0 &&
+									  goOn)
+								{
+								
+									
+
+									for(let n1=0; n1<addUs.length; n1++)
+									{
+										let chk = addUs[n1];
+										if(n1 == n)
+											continue;
+										
+										if( Math.floor(Math.sqrt(  
+																	Math.pow(checked_x-chk.x,2) + Math.pow(checked_y-chk.y,2)
+																)) <= radius )
+										{
+											goOn = false;
+											break;
+										}
+
+									}
+									
+									if(goOn)
+										margins[p] = ( p<2 ? checked_x : checked_y)
+
+									checked_x +=  pass[p].x;
+									checked_y +=  pass[p].y;
+								}
+
+
+
+
+							}
+
+							if( Math.abs(margins[0] - margins[1]) > Math.abs(margins[2] - margins[3]) )
+							{
+								curr.x = getRandomInt(margins[0], margins[1])
+
+
+
+
+
+
+
+
+							}else if(Math.abs(margins[0] - margins[1]) < Math.abs(margins[2] - margins[3]))
+							{
+								curr.y = getRandomInt(margins[2], margins[3])
+
+	
+
+
+							}
+
+							
+
+							
+							
+
+						}
+
+
+						
+						let n = 0;
+						for(; addUs.length > 0 ; )
+						{
+							let where = addUs.pop()
+							where = grid.cellXYtoIdx(where.x, where.y)
+							++n;
+							n%=validVals.length
+							n = n<=0 ? 1 : n;
+
+							setCellState(where, n, true, 
+									function(d){grid.cellsData[where] = JSON.parse(d);
+									grid.updateCellProps(where, {fill : PREDEFINED_COLORS[JSON.parse(d)]} )})
+
+
+						}
+
+				}
+			
+				var possiblePlaces = new Array();
+				for(let n = 0; n<maxFit; n++)
+					possiblePlaces.push(n);
+				shuffleArray(possiblePlaces);
+
+
+				for(let n = 0; n<count; n++)
+				{
+					let at = getSqCenterCell(possiblePlaces.pop())
+					addUs.push(at)
+				}
+			
+				for(let n = 0; n<grid.cellsData.length; n++)
+				{
+					if(grid.cellsData[n] != 0 || n == grid.cellsData.length-1)
+					{
+						setCellState(n, 0, true, 
+							function(d){grid.cellsData[n] = JSON.parse(d);
+							grid.updateCellProps(n, {fill : PREDEFINED_COLORS[JSON.parse(d)]} )
+							if(n == grid.cellsData.length-1)
+								addThem();
+
+						})
+
+					}
+				}
+
+
+			}
+
+			function insertRandom()
+			{
+
+				var randomCount = parseInt(document.getElementById("rand_count").value);
+
+				if(grid.cellsData.length <= 0)
+					return
+
+				function getRandom(min, max) {
+				    return Math.floor(Math.random() * (max - min) + min);
+				}
+
+				
+				let tmpCellsState = new Array(grid.cellsData.length).fill(0)
+
+				for(let n=0; n<randomCount; n++)
+				{
+					let idx = getRandom(0, tmpCellsState.length);
+
+					while(tmpCellsState[idx])
+					{
+						idx++;
+						idx%=tmpCellsState.length;
+					}
+					tmpCellsState[idx] =  getRandom(1, validVals.length);
+
+				}
+
+
+				for(let n=0; n<tmpCellsState.length; n++)
+					setCellState(n, tmpCellsState[n], true, 
+									function(d){grid.cellsData[n] = JSON.parse(d);
+									grid.updateCellProps(n, {fill : PREDEFINED_COLORS[JSON.parse(d)]} )
+								})
+				
+
+
+
+
+			}
+
+
+	  </script>
+
+	</head>
+<body onload="updateConnectionInfo(); updateInsertStateElement();">
+
+	<div id='connect_bg' style='
+							    position: fixed;
+							    left:0;
+							    top:0;
+							    right:1vw;
+							    bottom:1vh;
+							    background-color: rgba(125,125,125, 0.3);
+							    '>
+
+							
+							<div style=' position: absolute;
+										  left: 50%;
+										  top: 50%;
+										  transform: translate(-50%, -50%);
+										  background-color: white;
+										  border: 2px black solid;
+										  padding:10px;
+										  font-weight: bold;'>
+
+								    <img id='infoImg' style='margin:auto; display: block;' src='./res/img/load.gif'>
+								    <div id='infoMsg' style='margin-top: 10px; width: 100%; text-align: center;'></div>
+								    <div id='subInfoMsg' style='font-size: 8pt; margin-top: 10px; width: 100%; text-align: center;'></div>
+							</div>
+							
+		</div>
+
+	<button class="collapsible">
+		<div class='icon'></div>
+		<div class='icon'></div>
+		<div class='icon'></div>
+	</button>
+	<div class="content" expanded>
+		  <p>
+
+		  	<div style='display:inline-block; margin-left: 15px;'>
+					 <span style='padding: 3px;
+				 			   border-top: 1px black solid;
+				 			   border-left: 1px black solid;
+				 			   border-right: 1px black solid;
+				 			   font-weight: bold;'>
+				 			Siatka
+				 	 </span>
+				 	 <div style='border:1px solid black; clear:both; padding: 5px; display: table-cell;'>
+							Rozmiar X:<input type ="number" value="20" id="sizeX"  min="1" max="150" onfocusout="
+							 v=Number.parseInt(this.value);
+							 if(v<1 || Number.isNaN(v))this.value=1;
+							 if(v > 150)this.value=150;">
+
+							Rozmiar Y:<input type ="number" value="20" id="sizeY"  min="1" max="150" onfocusout="
+											 v=Number.parseInt(this.value);
+											 if(v<1 || Number.isNaN(v))this.value=1;
+											 if(v > 150)this.value=150;">
+
+							<button onclick='createGrid()'>Nowa siatka</button> 
+							<br style="margin-top:10px;">
+
+							<input id='wrapping' type="checkbox" onclick="return alterWrapping()" checked>Zawijanie
+
+				 	 </div>
+
+			</div>
+
+			<div style='display:inline-block; margin-left: 15px;'>
+					 <span style='padding: 3px;
+				 			   border-top: 1px black solid;
+				 			   border-left: 1px black solid;
+				 			   border-right: 1px black solid;
+				 			   font-weight: bold;'>
+				 			Wstawianie
+				 	 </span>
+				 	 <div style='border:1px solid black; clear:both; padding: 5px; display: table-cell;'>
+				 	 	<div>
+							Wstaw stan po kliknięciu: <input type ="number" value="1" id="insertWhat"  min="1" onfocusout=
+							    "v=parseInt(this.value);
+								 if(v<1 || Number.isNaN(v))this.value=1;
+								 if(v>validMax)this.value=validMax;
+								 insertState = parseInt(this.value);
+								 updateInsertStateElement();">
+						</div>
+
+						<div style="margin-top: 10px;">
+							<i style="margin-top:20px;">Wstawianie jednorodne:</i>
+							<br>
+							<div style="margin-left: 10px;">
+							Ilość x: <input style="width:50px;" type ="number" id="uniformX" value="1" min="1" onfocusout=
+							    "v=parseInt(this.value);
+								 if(v<1 || Number.isNaN(v))this.value=1;
+								 if(v>grid.xs)this.value=grid.xs;
+								 ">
+							Ilość y: <input style="width:50px;" type ="number"  id="uniformY" value="1"  min="1" onfocusout=
+							    "v=parseInt(this.value);
+								 if(v<1 || Number.isNaN(v))this.value=1;
+								 if(v>grid.ys)this.value=grid.ys;
+								 ">
+								
+								 <button onclick="insertUniform()" id="insertUniform" style="float: right;">Wstaw</button>
+							</div>
+						</div>
+
+						<div style="margin-top: 5px; ">
+							<i>Ograniczenie promieniem:</i>
+							<br>
+							<div style="margin-left: 10px;">
+							Promień: <input type ="number" style="width:50px;" id="radius" value="1"   min="1" onfocusout=
+							    "v=parseInt(this.value);
+								 if(v<1 || Number.isNaN(v))this.value=1;
+								 if(v>grid.xs)this.value=grid.xs;
+								 ">
+							Ilość: <input type ="number" style="width:50px;"  id="radius_count" value="1"  min="1" onfocusout=
+							    "v=parseInt(this.value);
+								 if(v<1 || Number.isNaN(v))this.value=1;
+								 ">
+								 <button onclick="insertRadial()" style=" margin-top:5px;">Wstaw</button>
+							</div>
+							
+						</div>
+
+
+						<div style="margin-top: 5px; ">
+							<i >Losowo:</i>
+							<br>
+							<div style="margin-left: 10px;">
+							Liczba: <input type ="number" style="width:50px;" id="rand_count" value="1"min="1" onfocusout=
+							    "v=parseInt(this.value);
+								 if(v<1 || Number.isNaN(v))this.value=1;
+								 if(v>grid.cellsData.length)this.value=grid.cellsData.length;
+								 ">
+								 <button onclick="insertRandom()" style=" margin-top:5px;">Wstaw</button>
+							</div>
+							
+						</div>
+
+				 	 </div>
+
+
+
+
+
+
+
+			</div>
+		  	
+
+		  	<div style='display:inline-block; margin-left: 15px;'>
+					 <span style='padding: 3px;
+				 			   border-top: 1px black solid;
+				 			   border-left: 1px black solid;
+				 			   border-right: 1px black solid;
+				 			   font-weight: bold;'>
+				 			Symulacja
+				 	 </span>
+				 	 <div style='border:1px solid black; clear:both; padding: 5px; display: table-cell;'>
+				 	 			<i>Symulacja krokowa:</i><br>
+				 	 			<div style="margin-left: 30px;">
+								 Liczba kroków: <input type ="number" value="1" id="stepsCount"  min="1" max="100" onfocusout="
+								 v=Number.parseInt(this.value);
+								 if(v<1 || Number.isNaN(v))this.value=1;
+								 if(v > 100)this.value=100;">
+								 <button onclick="step()">Wykonaj</button>
+								</div>
+
+								 
+								 <i>Symulacja ciągła:</i><br>
+								 <div style="margin-left: 30px;">
+								 Krok co (ms):<input type ="number" value="100" id="stepTimeout"  min="1" max="5000" onfocusout="
+								 v=Number.parseInt(this.value);
+								 if(v<1 || Number.isNaN(v))this.value=1;
+								 if(v > 5000)this.value=5000;">
+								 <button onclick="steps=Infinity; if(grid.cellsData.length)step();">Start</button>
+								 <button onclick="steps=0;">Stop</button>
+								 </div>
+
+
+
+				 	 </div>
+
+			</div>
+
+
+			
+
+	
+			 
+
+		 </p>
+	</div>
+
+	<div id="grid" style="z-index:-1; position: fixed; left:0; top:0; bottom:1vh; right:1vw; " onmousedown="changeInsertionOption(event)" >
+	</div>
+
+
+
+	<script src="./res/common/js/menu.js" type="text/javascript"></script>
+</body>
+</html>
