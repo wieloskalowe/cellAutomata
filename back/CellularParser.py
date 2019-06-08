@@ -5,7 +5,10 @@ COMMANDS = [
 				('RULE',{ 'switches':('NUMERIC', 'PREDEFINED'), 'subCommands':('ADD', 'NEW', 'DELETE', 'LIST', 'LIST_KNOWN', 'QUERY'),  'arguments':[str]}),
 				('SETI',{ 'switches':('STATES_ONLY'), 'subCommands':None,  'arguments':[int, str]}),
 				('SETC',{ 'switches':('STATES_ONLY'), 'subCommands':None,  'arguments':[int, int, int, str]}),
-				('WRAP',{ 'switches':None, 'subCommands':None,  'arguments':[int]})
+				('WRAP',{ 'switches':None, 'subCommands':None,  'arguments':[int]}),
+				('MCST',{ 'switches':('STATES_ONLY'), 'subCommands':None,  'arguments':[float]}), #monte carlo argument -> k
+				('DRX',{ 'switches':('RESET'), 'subCommands':None,  'arguments':[float, float, float, float, float, float]}),
+				('RADIUS',{ 'switches':None, 'subCommands':None,  'arguments':[float]})
 			   ]
 
 class CellularReqEntity:

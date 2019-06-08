@@ -1,14 +1,17 @@
 from .cell import Cell
 
+import math
+
 class Grid:
 
 
-	def __init__(self,x,y,z, requiredCellsFields = {}):
+	def __init__(self,x,y,z, requiredCellsFields = {}, sqRadius = 1):
 		self.cells = []
 		self.wrap = True
 		self.dimension = 0
+		self.sqRadius  = int(math.ceil(sqRadius))
 
-		self.create(x,y,z)
+		self.create(x,y,z, requiredCellsFields, sqRadius)
 		
 
 	
@@ -35,16 +38,15 @@ class Grid:
 
 		 
 
-	#could be optimized propably...
 	def _determine_neighbours(self, cellIdx):
 		neighbours = []
 
 		xi, yi, zi = self._idxToXYZ(cellIdx)
 
 
-		startZ = zi-1
-		startY = yi-1
-		startX = xi-1
+		startZ = zi-self.sqRadius
+		startY = yi-self.sqRadius
+		startX = xi-self.sqRadius
 
 
 		if self.wrap:
@@ -52,11 +54,10 @@ class Grid:
 			if startY < 0: startY = self.ys+startY
 			if startZ < 0: startZ = self.zs+startZ
 
-
 		
-		for z in range(3):
-			for y in range(3):
-				for x in range(3):
+		for z in range(2*self.sqRadius+1):
+			for y in range(2*self.sqRadius+1):
+				for x in range(2*self.sqRadius+1):
 
 					currX = startX + x
 					currY = startY + y
@@ -139,14 +140,23 @@ class Grid:
 
 
 		for c in toUpdate:
-			c.setNeighbours( self._determine_neighbours(c.selfId))
+			c.setNeighbours( self._determine_neighbours(c.selfId), self.sqRadius)
 
 	def setWrapMode(self, wrap):
 		self.wrap = wrap
 		self._update_edge_neighbours()
 
+	def setSqRadius(self, sqRadius):
+		if self.sqRadius == sqRadius:
+			return
 
-	def create(self, x, y, z, requiredCellsFields = {}):
+		self.sqRadius = int(math.ceil(sqRadius))
+
+		for n,c in enumerate(self.cells):
+			c.setNeighbours( self._determine_neighbours(n), self.sqRadius )
+
+
+	def create(self, x, y, z, requiredCellsFields = {}, sqRadius=1):
 		if x <= 0:
 			raise ValueError('X dimension has to be greater than 0!')
 		if y < 0:
@@ -157,9 +167,13 @@ class Grid:
 		if z > 0 and y <= 0:
 			raise ValueError('Y dimension cannot be 0 if Z is greater than 0!')
 
+		if sqRadius < 1:
+			raise ValueError('sqRadius cannot be lower than 1!')
+
 		self.xs = x
 		self.ys = y
 		self.zs = z
+		self.sqRadius = int(math.ceil(sqRadius))
 
 		self.dimension = sum(v>0 for v in [x,y,z])
 
@@ -173,7 +187,7 @@ class Grid:
 			self.cells.append(tmp)
 
 		for n,c in enumerate(self.cells):
-			c.setNeighbours( self._determine_neighbours(n) )
+			c.setNeighbours( self._determine_neighbours(n), self.sqRadius )
 
 
 

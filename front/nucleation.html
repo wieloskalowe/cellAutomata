@@ -21,16 +21,47 @@
 
 	  	var ruleInf = null;
 	  	var validVals = new Array();
-	  	var validMax = Infinity;
+	  	var validMax = validVals[validVals.length-1];
 	  	var validMin = 0;
+
+	  	var CurrRule = ''
+
 	  	CUSTOM_ON_CONNECT_CALLBACK = function()
 	  	{
-	  		ruleInfo('nucleation', function(d){
+
+	  	}
+
+	  	function changeCurrentRule(callback = null)
+	  	{
+	  		var rule = document.getElementsByClassName("neighbourhood");
+
+	  		for(let n=0; n<rule.length; n++)
+	  			if(rule[n].checked)
+	  			{
+	  				CurrRule = rule[n].id;
+	  				break
+	  			}
+
+	  		ruleInfo(CurrRule, function(d){
 	  			ruleInf = JSON.parse(d).state;
-	  			
+	  			let radius = 1
+
+	  			console.log(CurrRule)
+
+	  			if(CurrRule === 'radius')
+	  				radius = Number(document.getElementById("neighboursRadius").value)
+
+	  			setNeighboursRadius(radius, function(d){
+	  													setNewRule(CurrRule, function(d){
+
+	  														if(callback)callback()
+	  													});
+	  													});
 
 	  		})
+
 	  	}
+
 
 	  	function toColor(num) {
 							   	 let nopadded = num.toString(16).split('');
@@ -122,33 +153,12 @@
 			insertWhatElement.style.fontWeight 		= "bold"
 		}
 		
-
-		function createGrid()
-			{
-				let sx = d3.select('#sizeX').node().value
-				let sy = d3.select('#sizeY').node().value
-
-				try{
-					sx = Number.parseInt(sx)
-					sy = Number.parseInt(sy)
-				}
-				catch(e)
-				{
-					alert('Niepoprawny rozmiar siatki!')
-					return
-				}
-
-
-	  			
-				
-	  			var translationY = document.getElementsByClassName('content')[0].offsetHeight
-				new2Dsimulation(sx, sy, true, function(d){grid.newGrid(sx, sy, true, JSON.parse(d),
-									[], 55, translationY+20); 
-
-									PREDEFINED_COLORS = PREDEFINED_COLORS.slice(0,PREDEFINED_ORG_SIZE);
+		function updateRuleInfo()
+		{
+			PREDEFINED_COLORS = PREDEFINED_COLORS.slice(0,PREDEFINED_ORG_SIZE);
 									let colorIdx = ruleInf.b;
 
-									for(let n=ruleInf.b; n<= (ruleInf.e === null ? sx*sy : ruleInf.e) ; n++, colorIdx++)
+									for(let n=ruleInf.b; n<= (ruleInf.e === null ? grid.xs*grid.ys : ruleInf.e) ; n++, colorIdx++)
 									{
 										let found = false;
 										do
@@ -173,26 +183,51 @@
 
 									validMin = validVals[0]
 									validMax = validVals[validVals.length-1]
+		}
+
+		function createGrid()
+			{
+				let sx = d3.select('#sizeX').node().value
+				let sy = d3.select('#sizeY').node().value
+
+				try{
+					sx = Number.parseInt(sx)
+					sy = Number.parseInt(sy)
+				}
+				catch(e)
+				{
+					alert('Niepoprawny rozmiar siatki!')
+					return
+				}
+
+
+	  			
+				
+	  			var translationY = document.getElementsByClassName('content')[0].offsetHeight
+				new2Dsimulation(sx, sy, true, function(d){
+									grid.newGrid(sx, sy, true, JSON.parse(d), [], 55, translationY+20); 
+
+									updateRuleInfo();
 
 
 
-									addNamedRule('nucleation', function(){})})
+									addNamedRule(CurrRule, function(){})})
 			}
 
 		function alterWrapping()
-			{
-				var wrapping = d3.select('#wrapping').node().checked
-				
-				setWrappingMode(wrapping, function(d){
-					let checked = JSON.parse(d)
+		{
+			var wrapping = d3.select('#wrapping').node().checked
+			
+			setWrappingMode(wrapping, function(d){
+				let checked = JSON.parse(d)
 
-					d3.select('#wrapping').node().checked = checked
-				})
+				d3.select('#wrapping').node().checked = checked
+			})
 
 
 
-				return false
-			}
+			return false
+		}
 
 
 
@@ -201,6 +236,7 @@
 			var steps = 0;
 			function step()
 			{
+				ResetNextDrx = true;
 				if(steps <= 0)
 				{
 					steps = parseInt(document.getElementById('stepsCount').value)
@@ -240,6 +276,112 @@
 									timeoutF()
 								else
 									setTimeout(timeoutF,  parseInt(document.getElementById('stepTimeout').value));
+								
+
+						})
+			}
+
+
+			var ResetNextDrx = false;
+			var DRXsteps = 0;
+			function DRXstep()
+			{
+
+				if(DRXsteps <= 0)
+				{
+					DRXsteps = parseInt(document.getElementById('drxSteps').value)
+				}
+				
+
+				DRXsteps--;
+
+				var dt = parseFloat(document.getElementById('drxDt').value.replace(',', '.'))
+				var resetNext = ResetNextDrx
+				ResetNextDrx = false
+
+				drxStep(function(dn){
+
+								function timeoutFdrx()
+								{
+									var toAppend = JSON.parse(dn)
+									var cells = toAppend.cells;
+									var props 	 = []
+									var log = document.getElementById('drxLog')
+
+									log.value = (log.value+'\n'+String(toAppend.time)+'\n'+String(toAppend.ro)+"\n")
+
+
+									for(let n =0; n<cells.length; n++)
+									{
+										props.push( { 
+														mainText:(cells[n].rx == 1 ? '#' : ' ') 
+													} )
+
+									}
+
+
+
+				
+									grid.updateCellsProps(props)
+
+
+									if(DRXsteps > 0)
+										DRXstep()
+								}
+
+								
+								timeoutFdrx()
+								
+
+						}, dt, resetNext)
+			}
+
+
+			var MCsteps = 0;
+			function mCstep()
+			{
+				ResetNextDrx = true;
+				if(MCsteps <= 0)
+				{
+					MCsteps = 1;
+				}
+				
+				MCsteps--;
+
+				var kt = Number.parseFloat( document.getElementById('mcKt').value.replace(',','.') )
+
+				montecarloStep(kt, function(dn){
+
+								function timeoutF()
+								{
+									toAppend = JSON.parse(dn)
+									props 	 = []
+
+									for(let n =0; n<toAppend.length; n++)
+									{
+										grid.cellsData[n] = Number(toAppend[n])
+
+										props.push( { 
+														fill:PREDEFINED_COLORS[Number(toAppend[n])] 
+													} )
+
+
+									}
+
+
+
+				
+									grid.updateCellsProps(props)
+
+
+									if(MCsteps > 0)
+										mCstep()
+								}
+
+								if(MCsteps != Infinity)
+									timeoutF()
+								else
+									setTimeout(timeoutF, 10);
 								
 
 						})
@@ -344,7 +486,7 @@
 
 				if(totalSqArea >= rectArea ||  maxFit < count)
 				{
-					if(!confirm("Kierowniku, to się nie uda, wstawić: " + maxFit + "?"))
+					if(!confirm("Kierowniku, to się nie uda, wstawić: " + Math.ceil(maxFit) + "?"))
 						return;
 					else
 						count = maxFit;
@@ -488,9 +630,14 @@
 							n%=validVals.length
 							n = n<=0 ? 1 : n;
 
+
+
 							setCellState(where, n, true, 
-									function(d){grid.cellsData[where] = JSON.parse(d);
-									grid.updateCellProps(where, {fill : PREDEFINED_COLORS[JSON.parse(d)]} )})
+									function(d){
+
+									grid.cellsData[where] = JSON.parse(d);
+									grid.updateCellProps(where, {fill : PREDEFINED_COLORS[JSON.parse(d)]} )
+								})
 
 
 						}
@@ -502,27 +649,36 @@
 					possiblePlaces.push(n);
 				shuffleArray(possiblePlaces);
 
+				
 
 				for(let n = 0; n<count; n++)
 				{
 					let at = getSqCenterCell(possiblePlaces.pop())
 					addUs.push(at)
 				}
-			
-				for(let n = 0; n<grid.cellsData.length; n++)
-				{
-					if(grid.cellsData[n] != 0 || n == grid.cellsData.length-1)
-					{
-						setCellState(n, 0, true, 
-							function(d){grid.cellsData[n] = JSON.parse(d);
-							grid.updateCellProps(n, {fill : PREDEFINED_COLORS[JSON.parse(d)]} )
-							if(n == grid.cellsData.length-1)
-								addThem();
+				changeCurrentRule(function()
+					{	
 
-						})
+							updateRuleInfo();
+							for(let n = 0; n<grid.cellsData.length; n++)
+							{
+								if(grid.cellsData[n] != 0 || n == grid.cellsData.length-1)
+								{
+									setCellState(n, 0, true, 
+										function(d){grid.cellsData[n] = JSON.parse(d);
+										grid.updateCellProps(n, {fill : PREDEFINED_COLORS[JSON.parse(d)]} )
+										if(n == grid.cellsData.length-1)
+											addThem();
 
-					}
-				}
+									})
+
+								}
+							}
+
+							
+
+					});
+
 
 
 			}
@@ -544,14 +700,17 @@
 
 				for(let n=0; n<randomCount; n++)
 				{
+
 					let idx = getRandom(0, tmpCellsState.length);
+					
 
 					while(tmpCellsState[idx])
 					{
 						idx++;
 						idx%=tmpCellsState.length;
 					}
-					tmpCellsState[idx] =  getRandom(1, validVals.length);
+					tmpCellsState[idx] =  n+1;//getRandom(1, validVals.length);
+
 
 				}
 
@@ -559,6 +718,7 @@
 				for(let n=0; n<tmpCellsState.length; n++)
 					setCellState(n, tmpCellsState[n], true, 
 									function(d){grid.cellsData[n] = JSON.parse(d);
+										console.log(d);
 									grid.updateCellProps(n, {fill : PREDEFINED_COLORS[JSON.parse(d)]} )
 								})
 				
@@ -572,7 +732,7 @@
 	  </script>
 
 	</head>
-<body onload="updateConnectionInfo(); updateInsertStateElement();">
+<body onload="updateConnectionInfo(); updateInsertStateElement(); changeCurrentRule();">
 
 	<div id='connect_bg' style='
 							    position: fixed;
@@ -620,7 +780,7 @@
 							Rozmiar X:<input type ="number" value="20" id="sizeX"  min="1" max="150" onfocusout="
 							 v=Number.parseInt(this.value);
 							 if(v<1 || Number.isNaN(v))this.value=1;
-							 if(v > 150)this.value=150;">
+							 if(v > 150)this.value=150;"><br>
 
 							Rozmiar Y:<input type ="number" value="20" id="sizeY"  min="1" max="150" onfocusout="
 											 v=Number.parseInt(this.value);
@@ -747,10 +907,88 @@
 								 </div>
 
 
+								 <div>
+				 	 				<i>Typ sąsiedztwa:</i><br>
+									 <div style="margin-left: 30px;">
+									  <input type="radio" onclick="changeCurrentRule()" name="neighbourhood" class="neighbourhood" id="nucleation" checked> Moore
+									  <input type="radio" onclick="changeCurrentRule()" name="neighbourhood" class="neighbourhood" id="neumann" > Von Neumann
+									  <input type="radio" onclick="changeCurrentRule()" name="neighbourhood" class="neighbourhood" id="pentagonal" > Penta losowo<br>
+									  <input type="radio" onclick="changeCurrentRule()" name="neighbourhood" class="neighbourhood" id="hexrand" > Hex losowo
+									  <input type="radio" onclick="changeCurrentRule()" name="neighbourhood" class="neighbourhood" id="hexleft" > Hex lewy
+									  <input type="radio" onclick="changeCurrentRule()" name="neighbourhood" class="neighbourhood" id="hexright" > Hex prawy<br>
+
+									  <input type="radio" onclick="changeCurrentRule()" name="neighbourhood" class="neighbourhood" id="radius" > Promień 
+									  <input type ="number" value="1" id="neighboursRadius"  min="1" onfocusout="
+										 v=Number.parseInt(this.value);
+										 if(v<1 || Number.isNaN(v))this.value=1;
+										 else if(v > Math.min(grid.xs, grid.ys))this.value=Math.max(1, Math.min(grid.xs, grid.ys));
+										 changeCurrentRule()">
+
+									 </div>
+
+				 	 			</div>
+
+
+				 	 			<div>
+				 	 				<i>Monte carlo:</i><br>
+									 <div style="margin-left: 30px;">
+									  Kt:
+									  <input type ="number" value="1" id="mcKt" step='0.1'  min="0.1" max="6" onfocusout="
+										 v=Number.parseInt(this.value);
+										 if(v<0.1 || Number.isNaN(v))this.value=0.1;
+										 else if(v > 6)this.value=6">
+									  <button id="MCstep" onclick='steps=0; DRXsteps = 0; MCsteps=1; mCstep()'>Krok</button>
+									  <button id="MCstart" onclick='steps=0; DRXsteps = 0; MCsteps=Infinity; mCstep()'>Start</button>
+									  <button id="MCstop" onclick='MCsteps=0;'>Stop</button>
+
+									 </div>
+
+				 	 			</div>
+
+
 
 				 	 </div>
 
 			</div>
+
+			<div style='display:inline-block; margin-left: 15px;'>
+						 <span style='padding: 3px;
+					 			   border-top: 1px black solid;
+					 			   border-left: 1px black solid;
+					 			   border-right: 1px black solid;
+					 			   font-weight: bold;'>
+					 			Rekrystalizacja
+					 	 </span>
+						 <div style='border:1px solid black; clear:both; padding: 5px; display: table-cell;'>
+						 	 			<div style="display: inline-block;">
+						 	 				<i>DRX:</i><br>
+											 <div style="margin-left: 30px;">
+											  Krok czasowy:
+											  <input type ="number" value="0.001" id="drxDt" step='0.001'  min="0.0001"  onfocusout="
+												 v=Number.parseInt(this.value);
+												 if(v<0.0001 || Number.isNaN(v))this.value=0.0001;"><br>
+
+
+											  Liczba kroków:
+											  <input type ="number" value="1" id="drxSteps" step='1'  min="1"  onfocusout="
+												 v=Number.parseInt(this.value);
+												 if(v<1 || Number.isNaN(v))this.value=1;">
+											  <button id="MCstep" onclick=' steps=0; MCsteps=0; DRXstep()'>Wykonaj</button><br>
+											  <button id="MCstart" onclick='steps=0; MCsteps=0; DRXsteps=Infinity; DRXstep()'>Start</button>
+											  <button id="MCstop" onclick=' steps=0; MCsteps=0; DRXsteps=0;'>Stop</button>
+
+											 </div>
+
+						 	 			</div>
+						 	 			<div style="display: inline-block;" readonly>
+						 	 				<i>LOG:</i><br>
+						 	 				<textarea id="drxLog">
+						 	 					
+						 	 				</textarea>
+						 	 			</div>
+						  </div>
+				 	</div>
+
 
 
 			

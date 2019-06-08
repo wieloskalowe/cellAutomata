@@ -187,7 +187,7 @@ Grid.prototype._appendCells = function(x,y, modifiable, CellsData, CellsProps)
 		.append("text")
 		.attr("class", ".main-cell-text")
 		.text(function(d){return d.mainText;})
-		.attr("font-size", "12")
+		.attr("font-size", "20")
 		.attr("font-family", "Calibri")
 		.attr("font-weight", "bold")
 		.attr("x", function(d){return d.x+d.width/2-this.getBBox().width/2;})
@@ -400,10 +400,10 @@ Grid.prototype.updateCellsProps = function(props)
 		if(props[n]['fill'])
 			sqrs[n].style.fill = props[n]['fill']
 
-		if( props[n]['subText'] && typeof(props[n]['subText']) != typeof('') )
+		if( props[n]['subText'] && typeof(props[n]['subText']) == typeof('') )
 			this.updateSubText(sqrs[n], props[n]['subText'])
 
-		if( props[n]['mainText'] && typeof(props[n]['mainText']) != typeof('') )
+		if( props[n]['mainText'] && typeof(props[n]['mainText']) == typeof('') )
 			this.updateMainText(sqrs[n], props[n]['mainText'])
 	}
 
@@ -433,10 +433,10 @@ Grid.prototype.updateCellProps = function(idx, props)
 		if(props['fill'])
 			sqrs.style.fill = props['fill']
 
-		if( props['subText'] && typeof(props['subText']) != typeof('') )
+		if( props['subText'] && typeof(props['subText']) == typeof('') )
 			this.updateSubText(sqrs, props['subText'])
 
-		if( props['mainText'] && typeof(props['mainText']) != typeof('') )
+		if( props['mainText'] && typeof(props['mainText']) == typeof('') )
 			this.updateMainText(sqrs, props['mainText'])
 	
 

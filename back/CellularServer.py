@@ -14,6 +14,10 @@ from cellAutomata.simulation import Simulation
 from cellAutomata.rule.predefinedRules.Numeric1DRule import *
 from cellAutomata.rule.predefinedRules.MooreRule import *
 from cellAutomata.rule.predefinedRules.NucleationRule import *
+from cellAutomata.rule.predefinedRules.PentagonalRule import *
+from cellAutomata.rule.predefinedRules.NeumannRule import *
+from cellAutomata.rule.predefinedRules.HexRule import *
+from cellAutomata.rule.predefinedRules.RadialRule import *
 from cellAutomata.utils import *
 
 
@@ -42,8 +46,14 @@ Pectin
 #===========================#
 predefinedRules = {
 
-	'Moore':(MooreRule),
-	'Nucleation':(NucleationRule)
+	'Moore'		:(MooreRule),
+	'Nucleation':(NucleationRule),
+	'Pentagonal':(lambda : PentagonalRule(PentagonalType.RANDOM) ),
+	'Neumann' 	:(NeumannRule),
+	'HexLeft' 	:(lambda : HexRule(HexType.LEFT) ), 
+	'HexRight'	:(lambda : HexRule(HexType.RIGHT) ),
+	'HexRand' 	:(lambda : HexRule(HexType.RANDOM) ), 
+	'Radius'	:(RadialRule)
 }
 
 def _predefinedToLowercase():
@@ -82,13 +92,14 @@ class CellularDispatcher:
 	def _handleNEW(self, entity):
 
 		try:
-			self.simulation.new(entity.arguments[0], entity.arguments[1], entity.arguments[2], preserveWrap=True)
+			self.simulation.new(entity.arguments[0], entity.arguments[1], entity.arguments[2], preserveWrap=True, preserveRadius=True)
 		except RuntimeError as re:
 			return self.generateError(entity.sn, str(re))
 		except ValueError as ve:
 			return self.generateError(entity.sn, str(ve))
 
-		return self.generateSuccess(entity.sn, self._getCellsStateJSON('STATES_ONLY' in entity.switches))
+		STATES_ONLY =  (entity.switches is not None and 'STATES_ONLY' in entity.switches)
+		return self.generateSuccess(entity.sn, self._getCellsStateJSON(STATES_ONLY))
 		
 
 	def _handleSTEP(self, entity):
@@ -99,7 +110,8 @@ class CellularDispatcher:
 		except ValueError as ve:
 			return self.generateError(entity.sn, str(ve))
 		
-		return self.generateSuccess(entity.sn, self._getCellsStateJSON('STATES_ONLY' in entity.switches))
+		STATES_ONLY =  (entity.switches is not None and 'STATES_ONLY' in entity.switches)
+		return self.generateSuccess(entity.sn, self._getCellsStateJSON(STATES_ONLY))
 
 
 	"""
@@ -262,6 +274,8 @@ class CellularDispatcher:
 		except KeyError as e:
 			return self.generateError(entity.sn, "Unknown RULE subcommand '%s', need dispatcher upgrade?" % (entity.subCmd))
 
+
+
 	def _setCellByIdx(self, idx, reqSet):
 		if idx < 0:
 			raise ValueError('Index cannot be negative!')
@@ -303,7 +317,7 @@ class CellularDispatcher:
 			return  self.generateError(entity.sn, str(e))
 
 
-		if 'STATES_ONLY' in entity.switches:
+		if entity.switches is not None and 'STATES_ONLY' in entity.switches:
 			cellData = cellData['state']
 
 
@@ -335,7 +349,7 @@ class CellularDispatcher:
 
 
 
-		if 'STATES_ONLY' in entity.switches:
+		if entity.switches is not None and 'STATES_ONLY' in entity.switches:
 			cellData = cellData['state']
 
 		return self.generateSuccess(entity.sn, json.dumps(cellData))
@@ -349,6 +363,41 @@ class CellularDispatcher:
 
 		return self.generateSuccess(entity.sn, json.dumps(wrap))
 		
+	def _handleRADIUS(self, entity):
+		r = float(entity.arguments[0])
+
+		try:
+			self.simulation.setRadius(r)
+		except ValueError as e:
+			return self.generateError(entity.sn, e)
+
+		return self.generateSuccess(entity.sn, '')
+
+	def _handleMCST(self, entity):
+		try:
+			self.simulation.montecarloStep(entity.arguments[0])
+		except RuntimeError as re:
+			return self.generateError(entity.sn, str(re))
+		except ValueError as ve:
+			return self.generateError(entity.sn, str(ve))
+		
+		STATES_ONLY =  (entity.switches is not None and 'STATES_ONLY' in entity.switches)
+		return self.generateSuccess(entity.sn, self._getCellsStateJSON(STATES_ONLY))
+
+	def _handleDRX(self, entity):
+
+		if 'RESET' in entity.switches:
+			self.simulation.resetDRX()
+
+		try:
+			time, ro = self.simulation.drxStep(*entity.arguments) 
+		except RuntimeError as re:
+			return self.generateError(entity.sn, str(re))
+		except ValueError as ve:
+			return self.generateError(entity.sn, str(ve))
+		
+	
+		return self.generateSuccess(entity.sn, json.dumps({'time':time, 'ro':ro, 'cells':self.simulation.grid.cells}))
 
 	#========================================#
 
@@ -375,6 +424,9 @@ class CellularDispatcher:
 					'SETI':self._handleSETI,
 					'SETC':self._handleSETC,
 					'WRAP':self._handleWRAP,
+					'RADIUS':self._handleRADIUS,
+					'MCST':self._handleMCST,
+					'DRX':self._handleDRX
 					}[parsedEntity.cmd](parsedEntity)
 		except KeyError as e:
 			return self.generateError(req.sn, "Unknown command '%s', need dispatcher upgrade?" % (req.cmd))

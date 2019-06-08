@@ -44,6 +44,10 @@ function addNamedRule(ruleName, success_handler, error_handler = logErrorRespons
 	issueCmd(['RULE ADD PREDEFINED', ruleName].join(' '), success_handler, error_handler)
 }
 
+function setNewRule(ruleName, success_handler, error_handler = logErrorResponse )
+{
+	issueCmd(['RULE NEW PREDEFINED', ruleName].join(' '), success_handler, error_handler)
+}
 
 function simulationStep( statesOnly, success_handler, error_handler = logErrorResponse)
 {
@@ -60,7 +64,22 @@ function setWrappingMode(wrap, success_handler, error_handler = logErrorResponse
 	issueCmd(['WRAP', Number(wrap)].join(' '), success_handler, error_handler)
 }
 
-function ruleInfo(ruleName, success_handler, error_handler)
+function setNeighboursRadius(radius, success_handler, error_handler = logErrorResponse )
+{
+	issueCmd(['RADIUS', Number(radius)].join(' '), success_handler, error_handler)
+}
+
+function ruleInfo(ruleName, success_handler, error_handler = logErrorResponse)
 {
 	issueCmd(['RULE QUERY PREDEFINED', ruleName].join(' '), success_handler, error_handler)
+}
+
+function montecarloStep(kt, success_handler, statesOnly = true, error_handler = logErrorResponse)
+{
+	issueCmd(['MCST', (statesOnly ? 'STATES_ONLY' : '') , Number(kt)].join(' '), success_handler, error_handler)
+}
+
+function drxStep( success_handler, dt=0.001, ResetDRX = false, A = 86710969050178.5, B=9.41268203527779, crit=4215840142323.42, meanRatio=0.3, cannonRatio=0.0001, error_handler = logErrorResponse)
+{
+	issueCmd(['DRX', (ResetDRX ? 'RESET' : ''), Number(A), Number(B), Number(crit), Number(dt), Number(meanRatio), Number(cannonRatio)].join(' '), success_handler, error_handler)
 }
